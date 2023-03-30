@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"io/ioutil"
 	"log"
@@ -13,9 +14,22 @@ import (
 )
 
 func readFromS3(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// Fetch the query and path parameters from the request
+	queryParams := event.QueryStringParameters
+	pathParams := event.PathParameters
 
+	// Print the query and path parameters
+	fmt.Println("Query parameters:")
+	for key, value := range queryParams {
+		fmt.Printf("%s: %s\n", key, value)
+	}
+
+	fmt.Println("Path parameters:")
+	for key, value := range pathParams {
+		fmt.Printf("%s: %s\n", key, value)
+	}
 	s3Client := s3.New(session.Must(session.NewSession()))
-	resp, err := s3Client.GetObjectWithContext(ctx, &s3.GetObjectInput{
+	resp, err := s3Client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String("test-bucket-write"),
 		Key:    aws.String("my-file.txt"),
 	})

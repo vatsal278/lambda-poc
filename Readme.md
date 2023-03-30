@@ -10,6 +10,7 @@ http://www.inanzzz.com/index.php/post/yrut/handling-multiple-aws-lambda-handlers
 
 https://docs.aws.amazon.com/lambda/latest/dg/golang-package.html
 
+https://repost.aws/knowledge-center/lambda-execution-role-s3-bucket
 build using  --> 
 ```
 GOOS=linux GOARCH=amd64 go build -o write/main write/writeToS3.go
