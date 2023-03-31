@@ -11,11 +11,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/awslabs/aws-lambda-go-api-proxy/core"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
 )
+
+type Data struct {
+	id   string
+	data []byte
+}
 
 func postHandler(w http.ResponseWriter, r *http.Request) {
 	sess := session.Must(session.NewSession())
@@ -27,36 +33,37 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	id := uuid.NewString()
 	snsClient := sns.New(sess)
-	topicArn := "arn:aws:sns:ap-south-1:306488905853:new-test-topic"
+	topicArn := "arn:aws:sns:ap-south-1:306488905853:new-msg"
+
+	message := map[string]string{
+		"id":   id,
+		"data": string(by),
+	}
+
+	messageBytes, err := json.Marshal(message)
+	if err != nil {
+		log.Println(err)
+		json.NewEncoder(w).Encode(err.Error())
+		return
+	}
 
 	_, err = snsClient.Publish(&sns.PublishInput{
 		TopicArn: aws.String(topicArn),
-		Message:  aws.String(string(by)),
+		Message:  aws.String(string(messageBytes)),
 	})
 	if err != nil {
 		log.Println(err)
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
-	//ctx := context.Background()
-	//lambda.StartWithOptions(sqsToS3, lambda.WithContext(ctx))
-	//if ctx.Value("error") != nil || ctx.Err() != nil {
-	//	log.Println(err)
-	//	json.NewEncoder(w).Encode(err.Error())
-	//	return
-	//}
-	//log.Printf("this is ctx value vatsal %s", ctx.Value("id"))
-	//id, err := json.Marshal(map[string]interface{}{"id": ctx.Value("id")})
-	//if err != nil {
-	//	log.Println(err)
-	//	json.NewEncoder(w).Encode(err.Error())
-	//	return
-	//}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(message["id"]))
 	return
 }
+
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -77,10 +84,16 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
+	var data Data
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Println(err)
+		json.NewEncoder(w).Encode(err.Error())
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(body)
-	//json.NewEncoder(w).Encode(string(body))
+	w.Write(data.data)
 }
 
 func router() http.Handler {
