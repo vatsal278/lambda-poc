@@ -20,3 +20,4 @@ create func using -->
 ```
 aws lambda create-function     --function-name writeS3     --runtime go1.x     --handler main   --zip-file fileb://./write/main.zip.zip --publish --role arn:aws:iam::306488905853:role/service-role/test-lambda-role2
 ```
+![](../../../Users/Perennial/Downloads/AWS Hands-on.png)
