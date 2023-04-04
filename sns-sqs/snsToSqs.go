@@ -76,16 +76,9 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
-	var data Data
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		log.Println(err)
-		json.NewEncoder(w).Encode(err.Error())
-		return
-	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(data.Data))
+	w.Write(body)
 }
 
 func router() http.Handler {
