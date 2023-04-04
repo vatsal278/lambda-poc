@@ -19,39 +19,32 @@ import (
 )
 
 type Data struct {
-	id   string
-	data []byte
+	Id   string `json:"id"`
+	Data string `json:"data"`
 }
 
 func postHandler(w http.ResponseWriter, r *http.Request) {
 	sess := session.Must(session.NewSession())
-	log.Printf("This is request %+v\n", r)
+
 	by, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
-
-	id := uuid.NewString()
-	snsClient := sns.New(sess)
-	topicArn := "arn:aws:sns:ap-south-1:306488905853:new-msg"
-
-	message := map[string]string{
-		"id":   id,
-		"data": string(by),
-	}
-
-	messageBytes, err := json.Marshal(message)
+	var data = Data{Id: uuid.NewString(), Data: string(by)}
+	byt, err := json.Marshal(data)
 	if err != nil {
 		log.Println(err)
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
+	snsClient := sns.New(sess)
+	topicArn := "arn:aws:sns:ap-south-1:306488905853:create_file_s3"
 
 	_, err = snsClient.Publish(&sns.PublishInput{
 		TopicArn: aws.String(topicArn),
-		Message:  aws.String(string(messageBytes)),
+		Message:  aws.String(string(byt)),
 	})
 	if err != nil {
 		log.Println(err)
@@ -60,16 +53,15 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(message["id"]))
+	w.Write([]byte(data.Id))
 	return
 }
-
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	s3Client := s3.New(session.Must(session.NewSession()))
 	resp, err := s3Client.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String("test-bucket-write"),
+		Bucket: aws.String("s3-data-bucket0"),
 		Key:    aws.String(fmt.Sprintf("%s.txt", id)),
 	})
 	if err != nil {
@@ -93,13 +85,13 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data.data)
+	w.Write([]byte(data.Data))
 }
 
 func router() http.Handler {
 	r := mux.NewRouter()
-	r.HandleFunc("/sns", postHandler).Methods(http.MethodPost)
-	r.HandleFunc("/sns/{id}", getHandler).Methods(http.MethodGet)
+	r.HandleFunc("/", postHandler).Methods(http.MethodPost)
+	r.HandleFunc("/{id}", getHandler).Methods(http.MethodGet)
 	return r
 }
 
@@ -107,7 +99,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	r := router()
 	reqPath := request.Path
 	if request.Path == "" {
-		reqPath = "/sns"
+		reqPath = "/"
 	}
 	httpReq, err := http.NewRequest(request.HTTPMethod, reqPath, bytes.NewReader([]byte(request.Body)))
 	if err != nil {
